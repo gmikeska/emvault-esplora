@@ -1,6 +1,6 @@
 [package]
 name = "emvault-esplora"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2024"
 description = "Nodeless Esplora + Waterfalls chain backend for EmVault (BDK) wallets."
 license = "MIT OR Apache-2.0"
@@ -10,8 +10,8 @@ repository = "https://github.com/gmikeska/emvault-esplora"
 bdk_wallet = "3.1.0"
 bitcoin = "0.32.10"
 # Bitcoin-agnostic String/int DTOs → no `bitcoin` version conflict with BDK.
-# Path/patch until esplora-rs is published (see docs/design/integration-design.md §6.5).
-esplora-rs = { path = "../esplora-rs" }
+# Published on crates.io; 0.2 brings the structured `Error` (E1).
+esplora-rs = "0.2"
 thiserror = "2"
 hex = "0.4"
 # NO `futures` — `buffer_unordered` was deliberately dropped (invariant §1.1):
