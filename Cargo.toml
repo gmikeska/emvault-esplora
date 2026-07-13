@@ -21,3 +21,7 @@ hex = "0.4"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 serde_json = "1"
 dotenvy = "0.15"
+# Offline HTTP mocking for the sync/broadcast control-flow tests (no network).
+wiremock = "0.6"
+# Gated live signet tests use a bitcoind node to fund/build real txs.
+bitcoincore-rpc = "0.19"

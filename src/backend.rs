@@ -180,3 +180,55 @@ fn ensure_trailing_slash(url: &str) -> String {
         format!("{url}/")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{EsploraBackend, EsploraSyncOpts, SyncMode, cred_present, ensure_trailing_slash};
+    use bitcoin::Network;
+
+    #[test]
+    fn trailing_slash_added_once() {
+        assert_eq!(ensure_trailing_slash("https://x/api"), "https://x/api/");
+        assert_eq!(ensure_trailing_slash("https://x/api/"), "https://x/api/");
+    }
+
+    #[test]
+    fn cred_present_treats_empty_and_whitespace_as_absent() {
+        let key = "EMVAULT_ESPLORA_CRED_PRESENT_UNIT_TEST";
+        // SAFETY: single-threaded within this test; a crate-unique var name so it
+        // can't collide with other tests reading real ESPLORA_* vars.
+        unsafe { std::env::remove_var(key) };
+        assert!(!cred_present(key), "unset → absent");
+        unsafe { std::env::set_var(key, "   ") };
+        assert!(!cred_present(key), "whitespace-only → absent");
+        unsafe { std::env::set_var(key, "id") };
+        assert!(cred_present(key), "non-empty → present");
+        unsafe { std::env::remove_var(key) };
+    }
+
+    #[test]
+    fn sync_mode_default_is_address() {
+        assert_eq!(SyncMode::default(), SyncMode::Address);
+    }
+
+    #[test]
+    fn opts_default_is_gap_20_sequential() {
+        let o = EsploraSyncOpts::default();
+        assert_eq!(o.gap_limit, 20);
+        assert_eq!(o.parallelism, 1);
+    }
+
+    #[test]
+    fn builder_carries_mode_opts_and_network() {
+        let backend = EsploraBackend::new_public("https://x/api", Network::Testnet)
+            .expect("backend")
+            .with_mode(SyncMode::Waterfalls)
+            .with_opts(EsploraSyncOpts {
+                gap_limit: 5,
+                parallelism: 1,
+            });
+        assert_eq!(backend.mode(), SyncMode::Waterfalls);
+        assert_eq!(backend.gap_limit(), 5);
+        assert_eq!(backend.network(), Network::Testnet);
+    }
+}
