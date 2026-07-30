@@ -21,6 +21,11 @@ pub enum EsploraSyncError {
     /// (usually a reorg below the last persisted tip).
     #[error("failed to connect esplora update to the wallet's local chain")]
     CannotConnect(#[from] bdk_wallet::chain::local_chain::CannotConnectError),
+    /// The reorg-recovery rebuild couldn't reconstruct a fresh wallet from the
+    /// live wallet's own public descriptors. Should be unreachable (the
+    /// descriptors already built a valid wallet); surfaced rather than panicked.
+    #[error("failed to rebuild wallet from descriptors during reorg recovery: {0}")]
+    Rebuild(String),
 }
 
 impl EsploraSyncError {

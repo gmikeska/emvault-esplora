@@ -79,12 +79,16 @@ pub(crate) async fn extend_checkpoint_to_tip(
     }))
 }
 
-/// Take the staged changeset and read the new tip height into a result.
+/// Take the staged changeset and read the new tip height into a result. Used on
+/// the normal (non-reorg) sync/rescan paths: no eviction, no rebuild. The
+/// reorg-rebuild path ([`crate::backend`]) constructs its own result.
 pub(crate) fn finish(wallet: &mut Wallet, new_mempool_txs: u32) -> EsploraSyncResult {
     EsploraSyncResult {
         changeset: wallet.take_staged(),
         blocks_synced: 0,
         new_mempool_txs,
         tip_height: wallet.latest_checkpoint().height(),
+        evicted_txids: Vec::new(),
+        reorg_rebuilt: false,
     }
 }

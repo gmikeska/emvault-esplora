@@ -47,7 +47,11 @@ fn address_info(n: u64) -> serde_json::Value {
     })
 }
 
-/// Mount the two chain-tip endpoints every sync calls at the end.
+/// Mount the chain-tip endpoints every sync calls at the end, plus the
+/// `/block-height/<h>` endpoint the steady-state reorg reconciliation queries
+/// (`EsploraBackend::server_reorg_below_tip`). Returning `TIP_HASH` for every
+/// height means the wallet's stored checkpoint (also `TIP_HASH`) reconciles as a
+/// match → no reorg → no spurious rebuild on an incremental sync.
 async fn mount_tip(server: &MockServer) {
     Mock::given(method("GET"))
         .and(path("/blocks/tip/height"))
@@ -56,6 +60,11 @@ async fn mount_tip(server: &MockServer) {
         .await;
     Mock::given(method("GET"))
         .and(path("/blocks/tip/hash"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(TIP_HASH))
+        .mount(server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/block-height/\d+$"))
         .respond_with(ResponseTemplate::new(200).set_body_string(TIP_HASH))
         .mount(server)
         .await;
@@ -87,8 +96,64 @@ async fn address_scan_empty_wallet_advances_tip() {
         "empty wallet, no funds"
     );
     // Second (incremental) pass on a non-genesis wallet must stay consistent.
+    // (The `/block-height` mock returns the matching hash → no spurious reorg.)
     let again = backend.sync(&mut wallet).await.expect("incremental sync");
     assert_eq!(again.tip_height, 100);
+    assert!(
+        !again.reorg_rebuilt,
+        "a matching checkpoint hash must NOT trigger a rebuild"
+    );
+}
+
+/// The other half of the reconciliation truth table: when the server reports a
+/// **different** block hash at a stored checkpoint height than the wallet holds,
+/// `server_reorg_below_tip` must detect the reorg-below-tip and rebuild. Proves the
+/// detector *fires* (offline complement to the live 2×2), not just that it stays
+/// quiet on a match.
+#[tokio::test]
+async fn address_incremental_detects_reorg_and_rebuilds() {
+    // A different hash at the stored checkpoint height than the wallet holds.
+    const REORG_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000002";
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/blocks/tip/height"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(TIP_HEIGHT))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/blocks/tip/hash"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(TIP_HASH))
+        .mount(&server)
+        .await;
+    // All addresses unused → both the initial gap scan and the post-detection
+    // rebuild's full scan terminate cleanly.
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/address/[^/]+$"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(address_info(0)))
+        .mount(&server)
+        .await;
+
+    let mut wallet = test_wallet();
+    let backend = EsploraBackend::new_public(&server.uri(), Network::Testnet).expect("backend");
+    // First sync stores a checkpoint at height 100 = TIP_HASH.
+    backend.sync(&mut wallet).await.expect("initial sync");
+
+    // The server now reports a DIFFERENT hash at that height → reorg-below-tip.
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/block-height/\d+$"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(REORG_HASH))
+        .mount(&server)
+        .await;
+
+    let again = backend.sync(&mut wallet).await.expect("incremental sync");
+    assert!(
+        again.reorg_rebuilt,
+        "a checkpoint-hash mismatch at height <= tip must trigger a rebuild"
+    );
+    assert_eq!(
+        again.tip_height, 100,
+        "wallet re-followed the tip after rebuild"
+    );
 }
 
 #[tokio::test]
