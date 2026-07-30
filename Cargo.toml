@@ -10,8 +10,9 @@ repository = "https://github.com/gmikeska/emvault-esplora"
 bdk_wallet = "3.1.0"
 bitcoin = "0.32.10"
 # Bitcoin-agnostic String/int DTOs → no `bitcoin` version conflict with BDK.
-# Published on crates.io; 0.2 brings the structured `Error` (E1).
-esplora-rs = "0.2"
+# Published on crates.io; 0.3 loosens the waterfalls `TxSeen.v` spend sentinel
+# (`-1`) and block/tx `version` to signed ints (0.2 brought structured `Error`).
+esplora-rs = "0.3"
 thiserror = "2"
 hex = "0.4"
 # NO `futures` — `buffer_unordered` was deliberately dropped (invariant §1.1):
