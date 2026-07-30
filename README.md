@@ -5,6 +5,8 @@ Nodeless **Esplora + Waterfalls** chain backend for [EmVault](https://github.com
 Blockstream-style [Esplora](https://github.com/Blockstream/esplora) HTTP API, no
 Bitcoin Core node required.
 
+See the [CHANGELOG](https://github.com/gmikeska/emvault-esplora/blob/master/CHANGELOG.md) for release notes.
+
 It is normally enabled behind `emvault-core`'s `esplora` feature (which
 re-exports it as `emvault_core::esplora`), but it depends only on
 `bdk_wallet` / `bitcoin` / [`esplora-rs`](https://crates.io/crates/esplora-rs),
