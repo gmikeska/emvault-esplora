@@ -124,6 +124,29 @@ impl EsploraBackend {
         &self.client
     }
 
+    /// Current chain-tip height straight from the server (`/blocks/tip/height`),
+    /// without a wallet scan — a cheap live read for header/confirmation display.
+    ///
+    /// # Errors
+    /// Surfaces HTTP/parse failures via [`EsploraSyncError`].
+    pub async fn tip_height(&self) -> Result<u32, EsploraSyncError> {
+        Ok(u32::try_from(self.client.get_tip_height().await?).unwrap_or(u32::MAX))
+    }
+
+    /// Fetch a single transaction by txid straight from the server
+    /// (`/tx/{txid}`), without a wallet scan — e.g. to supply a hardware
+    /// signer's required previous transactions.
+    ///
+    /// # Errors
+    /// Surfaces HTTP/parse failures via [`EsploraSyncError`].
+    pub async fn get_tx(&self, txid: Txid) -> Result<Transaction, EsploraSyncError> {
+        let raw = self.client.get_raw_tx(&txid.to_string()).await?;
+        bitcoin::consensus::deserialize(raw.as_ref()).map_err(|_| EsploraSyncError::Malformed {
+            what: "transaction",
+            value: txid.to_string(),
+        })
+    }
+
     pub(crate) fn gap_limit(&self) -> u32 {
         self.opts.gap_limit
     }
