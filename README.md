@@ -14,9 +14,9 @@ so it can be used directly too.
 
 ```toml
 [dependencies]
-emvault-esplora = "0.6"
+emvault-esplora = "0.7"
 # or, via the facade:
-# emvault-core = { version = "0.6", features = ["esplora"] }
+# emvault-core = { version = "0.7", features = ["esplora"] }
 ```
 
 ## One backend, two strategies
@@ -59,6 +59,8 @@ let txid   = backend.broadcast(&signed).await?;
 | `.sync(&mut wallet)` | sync using the configured mode |
 | `.rescan(&mut wallet)` | force a full rescan |
 | `.broadcast(&tx)` | push a signed tx (`POST /tx`) |
+| `.tip_height()` | read the current chain tip from the REST backend, no RPC node |
+| `.get_tx(txid)` | fetch a full transaction (`GET /tx/{txid}` raw → decode) — nodeless prev-tx lookups |
 
 `sync` / `rescan` return an [`EsploraSyncResult`] (staged `ChangeSet` + counters);
 `emvault-core` provides `From<EsploraSyncResult> for chain_sync::SyncResult` so
