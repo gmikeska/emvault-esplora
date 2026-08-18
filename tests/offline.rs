@@ -5,8 +5,12 @@
 //! responses.
 
 use bdk_wallet::Wallet;
-use bdk_wallet::bitcoin::Network;
-use emvault_esplora::{EsploraBackend, SyncMode};
+use bdk_wallet::bitcoin::hashes::Hash;
+use bdk_wallet::bitcoin::{
+    Amount, Network, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Witness,
+    absolute::LockTime, consensus, transaction::Version,
+};
+use emvault_esplora::{EsploraBackend, EsploraSyncError, SyncMode};
 use wiremock::matchers::{method, path, path_regex};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -203,5 +207,105 @@ async fn address_scan_surfaces_http_errors() {
     assert!(
         backend.sync(&mut wallet).await.is_err(),
         "HTTP 500 must propagate"
+    );
+}
+
+/// A deterministic, unsigned transaction — self-contained and reproducible so
+/// its `compute_txid()` is stable across runs. No signing is needed: the offline
+/// tests only exercise fetch + consensus decode, not validation.
+fn sample_tx() -> Transaction {
+    Transaction {
+        version: Version::TWO,
+        lock_time: LockTime::ZERO,
+        input: vec![TxIn {
+            previous_output: OutPoint::new(Txid::all_zeros(), 0),
+            script_sig: ScriptBuf::new(),
+            sequence: Sequence::MAX,
+            witness: Witness::new(),
+        }],
+        output: vec![TxOut {
+            value: Amount::from_sat(50_000),
+            script_pubkey: ScriptBuf::new(),
+        }],
+    }
+}
+
+#[tokio::test]
+async fn tip_height_reads_chain_tip() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/blocks/tip/height"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("100"))
+        .mount(&server)
+        .await;
+
+    let backend = EsploraBackend::new_public(&server.uri(), Network::Testnet).expect("backend");
+    assert_eq!(
+        backend.tip_height().await.expect("tip height"),
+        100,
+        "tip_height must read the plaintext chain tip"
+    );
+}
+
+#[tokio::test]
+async fn get_tx_fetches_and_decodes() {
+    // esplora-rs `get_raw_tx` hits `/tx/{txid}/raw` and returns RAW CONSENSUS
+    // BYTES — so the mock body is the serialized tx, not hex.
+    let tx = sample_tx();
+    let txid = tx.compute_txid();
+    let raw = consensus::serialize(&tx);
+
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path(format!("/tx/{txid}/raw")))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(raw))
+        .mount(&server)
+        .await;
+
+    let backend = EsploraBackend::new_public(&server.uri(), Network::Testnet).expect("backend");
+    let fetched = backend.get_tx(txid).await.expect("get_tx");
+    assert_eq!(
+        fetched.compute_txid(),
+        txid,
+        "decoded transaction must round-trip to the same txid"
+    );
+}
+
+#[tokio::test]
+async fn get_tx_missing_returns_error() {
+    let txid = sample_tx().compute_txid();
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path(format!("/tx/{txid}/raw")))
+        .respond_with(ResponseTemplate::new(404).set_body_string("not found"))
+        .mount(&server)
+        .await;
+
+    let backend = EsploraBackend::new_public(&server.uri(), Network::Testnet).expect("backend");
+    assert!(
+        backend.get_tx(txid).await.is_err(),
+        "a 404 on /tx/{{txid}}/raw must surface as an error"
+    );
+}
+
+#[tokio::test]
+async fn get_tx_malformed_bytes_error() {
+    let txid = sample_tx().compute_txid();
+    let server = MockServer::start().await;
+    // A 200 whose body is not valid consensus-encoded bytes → decode failure.
+    Mock::given(method("GET"))
+        .and(path(format!("/tx/{txid}/raw")))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(vec![0xde, 0xad, 0xbe, 0xef]))
+        .mount(&server)
+        .await;
+
+    let backend = EsploraBackend::new_public(&server.uri(), Network::Testnet).expect("backend");
+    let err = backend
+        .get_tx(txid)
+        .await
+        .expect_err("malformed bytes must error");
+    assert!(
+        matches!(err, EsploraSyncError::Malformed { .. }),
+        "non-decodable bytes must map to EsploraSyncError::Malformed, got: {err:?}"
     );
 }

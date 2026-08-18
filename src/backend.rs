@@ -84,6 +84,37 @@ impl EsploraBackend {
     ///
     /// # Errors
     /// Returns [`EsploraSyncError::Http`] if the base URL is invalid.
+    ///
+    /// # Example
+    ///
+    /// Connect and take a couple of cheap live reads (chain tip + a single
+    /// transaction) without a wallet scan. Requires a reachable Esplora server,
+    /// so this example is compiled and type-checked but not executed.
+    ///
+    /// ```no_run
+    /// use std::str::FromStr;
+    ///
+    /// use bitcoin::{Network, Txid};
+    /// use emvault_esplora::{EsploraBackend, SyncMode};
+    ///
+    /// # async fn demo() -> Result<(), emvault_esplora::EsploraSyncError> {
+    /// let backend = EsploraBackend::connect(
+    ///     "https://blockstream.info/testnet/api",
+    ///     Network::Testnet,
+    /// )?
+    /// .with_mode(SyncMode::Address);
+    ///
+    /// let height: u32 = backend.tip_height().await?;
+    ///
+    /// let txid = Txid::from_str(
+    ///     "5e3f9177f5e1a9c2c0d1a6d1f0b6c0a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8",
+    /// )
+    /// .unwrap();
+    /// let tx = backend.get_tx(txid).await?;
+    /// # let _ = (height, tx);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn connect(base_url: &str, network: Network) -> Result<Self, EsploraSyncError> {
         if cred_present("ESPLORA_CLIENT_ID") && cred_present("ESPLORA_CLIENT_SECRET") {
             Self::new_enterprise(base_url, network)
