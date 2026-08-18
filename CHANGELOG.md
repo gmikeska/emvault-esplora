@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Entries for 0.5.0 and earlier were reconstructed from git history.
 > This crate's first release was 0.3.0 (it did not exist at 0.2.0 or earlier).
 
+## [0.8.0] - 2026-08-16
+
+### Changed
+- Lockstep version bump to stay in sync with the emvault suite. No functional
+  changes since 0.7.0.
+
 ## [0.7.0] - 2026-08-03
 
 ### Added
