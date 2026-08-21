@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Entries for 0.5.0 and earlier were reconstructed from git history.
 > This crate's first release was 0.3.0 (it did not exist at 0.2.0 or earlier).
 
+## [0.9.0] - 2026-08-21
+
+### Changed
+- Released in lockstep with the suite-wide v0.9.0 (driven by `emvault-elements`'
+  asset-aware federation migration). No functional changes to `emvault-esplora`
+  this round; adds GitHub CI workflows and switches inter-crate dependencies to
+  version-only requirements so isolated CI resolves against crates.io.
+
 ## [0.8.0] - 2026-08-16
 
 ### Changed

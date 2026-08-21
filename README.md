@@ -14,9 +14,9 @@ so it can be used directly too.
 
 ```toml
 [dependencies]
-emvault-esplora = "0.8"
+emvault-esplora = "0.9"
 # or, via the facade:
-# emvault-core = { version = "0.8", features = ["esplora"] }
+# emvault-core = { version = "0.9", features = ["esplora"] }
 ```
 
 ## One backend, two strategies
