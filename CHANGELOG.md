@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Entries for 0.5.0 and earlier were reconstructed from git history.
 > This crate's first release was 0.3.0 (it did not exist at 0.2.0 or earlier).
 
+## [0.10.0] - 2026-08-28
+
+### Changed
+- Released in lockstep with the suite-wide **0.10.0** (`emvault-core` F1/F4/F2 Taproot signing/verification + config-auth security hardening). No functional changes to this crate; rebuilt against `emvault-core` 0.10.0.
+
 ## [0.9.0] - 2026-08-21
 
 ### Changed
