@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Entries for 0.5.0 and earlier were reconstructed from git history.
 > This crate's first release was 0.3.0 (it did not exist at 0.2.0 or earlier).
 
+## [0.11.0] - 2026-11-24
+
+Released in lockstep with the suite. No functional change in this crate; the version
+moves so every inter-crate requirement in the suite resolves at one version (see
+`emvault-pkcs11` 0.11.0 for this round's change).
+
 ## [0.10.0] - 2026-08-28
 
 ### Changed
